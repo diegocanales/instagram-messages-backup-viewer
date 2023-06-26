@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Conversation</title>
+    <meta charset="UTF-8">
+    <style>
+        .message {
+            margin-bottom: 10px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+        }
+
+        .sender {
+            font-weight: bold;
+        }
+
+        .timestamp {
+            font-size: 0.8em;
+            color: #888;
+        }
+
+        .content {
+            margin-top: 5px;
+        }
+
+        .participant1 {
+            text-align: left;
+        }
+
+        .participant2 {
+            text-align: right;
+        }
+
+        .photo {
+            max-width: 100%;
+            height: auto;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Conversation</h1>
+
+    <div>
+        <label for="jsonPath">Path to JSON file:</label>
+        <input type="text" id="jsonPath" value="path/to/file.json">
+        <button onclick="loadConversation()">Cargar</button>
+    </div>
+
+    <div id="conversation"></div>
+
+    <script>
+        // Obtener la referencia al elemento contenedor
+        var conversationContainer = document.getElementById('conversation');
+
+        function loadConversation() {
+            // Obtener la ruta del archivo JSON ingresada por el usuario
+            var jsonPathInput = document.getElementById('jsonPath');
+            var jsonPath = jsonPathInput.value;
+
+            // Realizar una solicitud para obtener el archivo JSON
+            var xhr = new XMLHttpRequest();
+            xhr.overrideMimeType("application/json;charset=utf-8");
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    var conversation = JSON.parse(xhr.responseText);
+
+                    // Generar el HTML de la conversación en orden inverso
+                    var html = '';
+                    for (var i = conversation.messages.length - 1; i >= 0; i--) {
+                        var message = conversation.messages[i];
+                        var sender = message.sender_name;
+                        var timestamp = new Date(message.timestamp_ms).toLocaleString();
+                        var content = decodeURIComponent(escape(message.content));
+                        var audioFiles = message.audio_files;
+                        var photos = message.photos;
+
+                        // Determinar la clase CSS según el remitente del mensaje
+                        var participantClass = (sender === conversation.participants[0].name) ? 'participant1' : 'participant2';
+
+                        html += '<div class="message ' + participantClass + '">';
+                        html += '<div class="sender">' + sender + '</div>';
+                        html += '<div class="timestamp">' + timestamp + '</div>';
+                        html += '<div class="content">' + content + '</div>';
+
+                        // Comprobar si hay archivos de audio en el mensaje
+                        if (audioFiles && audioFiles.length > 0) {
+                            html += '<div class="audio-files">';
+                            for (var j = 0; j < audioFiles.length; j++) {
+                                var audioFile = audioFiles[j];
+                                var audioUri = audioFile.uri;
+                                var audioCreationTimestamp = new Date(audioFile.creation_timestamp * 1000).toLocaleString();
+
+                                html += '<audio controls>';
+                                html += '<source src="' + audioUri + '" type="audio/mp4">';
+                                html += 'Your browser does not support audio playback.';
+                                html += '</audio>';
+                                html += '<div class="audio-timestamp">' + audioCreationTimestamp + '</div>';
+                            }
+                            html += '</div>';
+                        }
+
+                        // Comprobar si hay fotos en el mensaje
+                        if (photos && photos.length > 0) {
+                            html += '<div class="photos">';
+                            for (var k = 0; k < photos.length; k++) {
+                                var photo = photos[k];
+                                var photoUri = photo.uri;
+                                var photoCreationTimestamp = new Date(photo.creation_timestamp * 1000).toLocaleString();
+
+                                html += '<img src="' + photoUri + '" alt="Foto" class="photo">';
+                                html += '<div class="photo-timestamp">' + photoCreationTimestamp + '</div>';
+                            }
+                            html += '</div>';
+                        }
+
+                        html += '</div>';
+                    }
+
+                    // Insertar el HTML en el contenedor
+                    conversationContainer.innerHTML = html;
+                }
+            };
+            xhr.open("GET", jsonPath, true);
+            xhr.send();
+        }
+    </script>
+</body>
+</html>
